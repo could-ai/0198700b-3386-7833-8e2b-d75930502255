@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:couldai_user_app/chat_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:couldai_user_app/integrations/supabase.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: SupabaseConfig.supabaseUrl,
+    anonKey: SupabaseConfig.supabaseAnonKey,
+  );
+
   runApp(const MyApp());
 }
 

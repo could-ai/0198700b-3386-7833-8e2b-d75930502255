@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:couldai_user_app/models/message.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -9,26 +10,27 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final List<Message> _messages = [
-    Message(text: "Hi there!", isMe: false),
-    Message(text: "Hello!", isMe: true),
-    Message(text: "How are you?", isMe: false),
-    Message(text: "I'm doing great, thanks! And you?", isMe: true),
-  ];
   final TextEditingController _textController = TextEditingController();
+  final _messagesStream = Supabase.instance.client
+      .from('messages')
+      .stream(primaryKey: ['id']).order('created_at', ascending: false);
 
-  void _handleSubmitted(String text) {
+  void _handleSubmitted(String text) async {
     _textController.clear();
     if (text.isNotEmpty) {
-      setState(() {
-        _messages.insert(0, Message(text: text, isMe: true));
-        // Simulate a reply
-        Future.delayed(const Duration(seconds: 1), () {
-          setState(() {
-            _messages.insert(0, Message(text: "I'm a bot, I can't reply yet.", isMe: false));
-          });
-        });
-      });
+      try {
+        await Supabase.instance.client
+            .from('messages')
+            .insert({'text': text, 'is_me': true});
+      } catch (e) {
+        // Handle error, maybe show a snackbar
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to send message: $e'),
+            backgroundColor: Colors.red,
+          ));
+        }
+      }
     }
   }
 
@@ -41,7 +43,8 @@ class _ChatScreenState extends State<ChatScreen> {
             child: TextField(
               controller: _textController,
               onSubmitted: _handleSubmitted,
-              decoration: const InputDecoration.collapsed(hintText: "Send a message"),
+              decoration:
+                  const InputDecoration.collapsed(hintText: "Send a message"),
             ),
           ),
           IconButton(
@@ -62,14 +65,29 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: <Widget>[
           Flexible(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8.0),
-              reverse: true,
-              itemBuilder: (_, int index) {
-                final message = _messages[index];
-                return _buildMessage(message);
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _messagesStream,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No messages yet. Start chatting!'));
+                }
+
+                final messages =
+                    snapshot.data!.map((map) => Message.fromMap(map)).toList();
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(8.0),
+                  reverse: true,
+                  itemBuilder: (_, int index) {
+                    final message = messages[index];
+                    return _buildMessage(message);
+                  },
+                  itemCount: messages.length,
+                );
               },
-              itemCount: _messages.length,
             ),
           ),
           const Divider(height: 1.0),
@@ -83,8 +101,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildMessage(Message message) {
-    final align = message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final color = message.isMe ? Theme.of(context).colorScheme.primary : Colors.grey.shade300;
+    final align =
+        message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final color = message.isMe
+        ? Theme.of(context).colorScheme.primary
+        : Colors.grey.shade300;
     final textColor = message.isMe ? Colors.white : Colors.black;
 
     return Column(
