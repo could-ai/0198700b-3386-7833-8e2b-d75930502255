@@ -21,7 +21,7 @@ class _ChatScreenState extends State<ChatScreen> {
       try {
         await Supabase.instance.client
             .from('messages')
-            .insert({'text': text, 'is_me': true});
+            .insert({'text': text, 'right_me': true});
       } catch (e) {
         // Handle error, maybe show a snackbar
         if (mounted) {
@@ -102,11 +102,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessage(Message message) {
     final align =
-        message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final color = message.isMe
+        message.rightMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final color = message.rightMe
         ? Theme.of(context).colorScheme.primary
         : Colors.grey.shade300;
-    final textColor = message.isMe ? Colors.white : Colors.black;
+    final textColor = message.rightMe ? Colors.white : Colors.black;
 
     return Column(
       crossAxisAlignment: align,

@@ -1,13 +1,13 @@
 class Message {
   final String id;
   final String text;
-  final bool isMe;
+  final bool rightMe;
   final DateTime createdAt;
 
   Message({
     required this.id,
     required this.text,
-    required this.isMe,
+    required this.rightMe,
     required this.createdAt,
   });
 
@@ -15,7 +15,7 @@ class Message {
     return Message(
       id: map['id'].toString(),
       text: map['text'],
-      isMe: map['is_me'],
+      rightMe: map['right_me'],
       createdAt: DateTime.parse(map['created_at']),
     );
   }
